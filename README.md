@@ -54,6 +54,13 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate.ps1   # Windows
 ```
 
+If you encounter an execution policy error on Windows, run the following command in PowerShell as Administrator:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+Then try activating the virtual environment again.
+
+
 ### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt # Optional
