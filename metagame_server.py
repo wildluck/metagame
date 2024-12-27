@@ -10,6 +10,7 @@ This software is provided "as is," without any warranty of any kind. The author 
 """
 
 
+import logging
 from socket import socket, AF_INET, SOCK_STREAM
 from pickle import dumps, loads
 from random import randint
@@ -18,6 +19,9 @@ from custom_package.custom_status import ResponseStatus
 from threading import Thread
 from collections import OrderedDict
 from sqlite3 import connect
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants for server configuration
 DNOC = 50  # Default number of connections
@@ -72,7 +76,7 @@ def init_db():
                       )''')
     conn.commit()
     conn.close()
-    print("Database initialized.")
+    logging.info("Database initialized.")
 
 def handle_client(client_socket):
     """
@@ -106,7 +110,7 @@ def handle_client(client_socket):
         account_cache.move_to_end(nickname)
         if len(account_cache) > MAX_CACHE_SIZE:
             evicted = account_cache.popitem(last=False)
-            print(f"Evicted {evicted[0]} from cache.")
+            logging.info(f"Evicted {evicted[0]} from cache.")
 
     try:
         while True:
@@ -117,11 +121,11 @@ def handle_client(client_socket):
             if request_type == RequestType.LOG_IN:
                 # Handle login request
                 nickname = request_data['nickname']
-                print(f"Processing login for {nickname}.")
+                logging.info(f"Processing login for {nickname}.")
 
                 if nickname in account_cache:
                     account_data = account_cache[nickname]
-                    print(f"Cache hit for {nickname}.")
+                    logging.info(f"Cache hit for {nickname}.")
                 else:
                     cursor.execute('SELECT * FROM accounts WHERE nickname = ?', (nickname,))
                     account = cursor.fetchone()
@@ -133,7 +137,7 @@ def handle_client(client_socket):
                                        (nickname, starting_credits))
                         conn.commit()
                         account = (nickname, starting_credits)
-                        print(f"Created new account for {nickname} with {starting_credits} credits.")
+                        logging.info(f"Created new account for {nickname} with {starting_credits} credits.")
 
                     cursor.execute('SELECT item_name FROM items WHERE nickname = ?', (nickname,))
                     owned_items = [row[0] for row in cursor.fetchall()]
@@ -146,13 +150,13 @@ def handle_client(client_socket):
             elif request_type == RequestType.LOG_OUT:
                 # Handle logout request
                 send_response(ResponseStatus.SUCCESS, {'message': 'Logged out successfully.'})
-                print("Client logged out.")
+                logging.info("Client logged out.")
                 break
 
             elif request_type == RequestType.GET_BALANCE:
                 # Handle balance inquiry
                 nickname = request_data['nickname']
-                print(f"Fetching balance for {nickname}.")
+                logging.info(f"Fetching balance for {nickname}.")
                 account_data = account_cache.get(nickname)
 
                 if not account_data:
@@ -214,11 +218,11 @@ def handle_client(client_socket):
                     send_response(ResponseStatus.ERROR, {'message': 'Item not owned.'})
 
     except Exception as e:
-        print(f"Error: {e}")
+        logging.error(f"Error: {e}")
     finally:
         client_socket.close()
         conn.close()
-        print("Client connection closed.")
+        logging.info("Client connection closed.")
 
 def start_metagame_server(addr, port):
     """
@@ -232,15 +236,15 @@ def start_metagame_server(addr, port):
     server_socket = socket(AF_INET, SOCK_STREAM)
     server_socket.bind((addr, port))
     server_socket.listen(DNOC)
-    print(f"Server running on {addr}:{port}.")
+    logging.info(f"Server running on {addr}:{port}.")
 
     try:
         while True:
             client_socket, client_address = server_socket.accept()
-            print(f"Client connected from {client_address}.")
+            logging.info(f"Client connected from {client_address}.")
             Thread(target=handle_client, args=(client_socket,)).start()
     except KeyboardInterrupt:
-        print("Shutting down server.")
+        logging.info("Shutting down server.")
     finally:
         server_socket.close()
-        print("Server socket closed.")
+        logging.info("Server socket closed.")
